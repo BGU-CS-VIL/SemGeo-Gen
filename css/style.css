@@ -1,0 +1,277 @@
+/* SemGeo-Gen project page. Visual style follows the GSA project page
+   (https://bgu-cs-vil.github.io/GSA-project/): Lato, white/gray alternating
+   sections, dark link buttons, blue author links, purple venue line. */
+
+:root {
+  --text: #212529;
+  --muted: #5f6368;
+  --gray-bg: #f5f5f7;
+  --border: #dee2e6;
+  --author: #6cacde;
+  --venue: #9b59b6;
+  --ours-bg: #eaf2fb;
+  --ours-text: #1f4e8c;
+}
+
+body {
+  margin: 0;
+  font-family: 'Lato', Verdana, Helvetica, sans-serif;
+  color: var(--text);
+  background: #fff;
+}
+
+/* Sections */
+.section { padding: 48px 5%; }
+.section.gray { background: var(--gray-bg); }
+.section-inner { max-width: 1100px; margin: 0 auto; }
+.section-narrow { max-width: 860px; margin: 0 auto; }
+
+.section h2 {
+  text-align: center;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+.section .lead-sub {
+  text-align: center;
+  color: var(--muted);
+  font-size: 1.08em;
+  margin-bottom: 28px;
+}
+.section h3 {
+  font-size: 1.3em;
+  font-weight: 700;
+  text-align: center;
+  margin: 36px 0 6px;
+}
+.section p { font-size: 16px; line-height: 1.65; }
+
+/* Header */
+.page-header { padding: 34px 5% 18px; text-align: center; }
+.page-header h1 {
+  font-size: clamp(1.45rem, 3.2vw, 2.15rem);
+  font-weight: 400;
+  line-height: 1.3;
+  max-width: 1100px;
+  margin: 0 auto 10px;
+}
+.authors a, .authors span {
+  font-size: 22px;
+  color: var(--author);
+  text-decoration: none;
+  margin: 0 10px;
+  white-space: nowrap;
+}
+.authors a:hover { text-decoration: underline; }
+.affiliation { font-size: 17px; margin-top: 6px; }
+.venue { color: var(--venue); font-size: 1.5em; margin-top: 6px; }
+
+.links { margin-top: 16px; }
+.links .btn { margin: 5px; font-size: 18px; }
+.links .btn.soon {
+  pointer-events: none;
+  opacity: 0.55;
+}
+.links .btn.soon small { font-size: 0.7em; font-weight: 400; margin-left: 4px; }
+
+/* Teaser */
+.teaser { padding: 0 5% 28px; }
+.teaser video {
+  display: block;
+  width: 100%;
+  max-width: 1000px;
+  margin: 0 auto;
+  border-radius: 10px;
+}
+.caption {
+  text-align: center;
+  color: var(--muted);
+  font-size: 0.95em;
+  margin-top: 10px;
+}
+
+/* Highlight tiles */
+.stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  max-width: 1000px;
+  margin: 8px auto 0;
+}
+.stat {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px 12px;
+  text-align: center;
+}
+.stat .num { font-size: 2em; font-weight: 700; color: var(--ours-text); line-height: 1.1; }
+.stat .lbl { color: var(--muted); font-size: 0.95em; margin-top: 4px; }
+
+/* Abstract */
+.abstract p { text-align: justify; font-size: 16px; }
+
+/* Figures */
+figure { margin: 0; }
+.fig { width: 100%; height: auto; display: block; margin: 0 auto; }
+.fig-card {
+  background: #fff;
+  border-radius: 14px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.07);
+  padding: 22px;
+}
+.modalities {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  align-items: end;
+}
+.modalities figcaption, .col-label {
+  text-align: center;
+  font-weight: 700;
+  font-size: 1.05em;
+  margin-top: 6px;
+}
+
+/* Method steps */
+/* minmax(0, 1fr) and min-width: 0 let long equations scroll inside a card
+   instead of widening the card (and the page) on phones. */
+.steps { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; margin-top: 28px; }
+.step {
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 18px 22px;
+  background: #fff;
+}
+.step h4 { font-size: 1.12em; font-weight: 700; margin: 0 0 6px; }
+.step .num {
+  display: inline-block;
+  width: 1.7em;
+  height: 1.7em;
+  line-height: 1.7em;
+  text-align: center;
+  border-radius: 50%;
+  background: #212529;
+  color: #fff;
+  font-size: 0.85em;
+  margin-right: 8px;
+}
+.step p { margin: 0 0 6px; }
+.step .tag {
+  font-size: 0.72em;
+  font-weight: 700;
+  color: var(--muted);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 1px 8px;
+  margin-left: 6px;
+  vertical-align: middle;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+mjx-container[display="true"] { overflow-x: auto; overflow-y: hidden; max-width: 100%; }
+
+/* Coverage rows */
+.coverage-labels {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-bottom: 4px;
+}
+.coverage img { margin-bottom: 6px; }
+.legend-green { color: #2e8b57; font-weight: 700; }
+.legend-red { color: #d0312d; font-weight: 700; }
+.pruning {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  align-items: center;
+}
+
+/* Tables */
+.table-wrap { overflow-x: auto; margin: 0 auto; }
+table.results {
+  border-collapse: collapse;
+  margin: 0 auto;
+  font-size: 15px;
+  font-variant-numeric: tabular-nums;
+  background: #fff;
+}
+table.results th, table.results td {
+  padding: 6px 10px;
+  text-align: center;
+  white-space: nowrap;
+}
+table.results th:first-child, table.results td:first-child { text-align: left; }
+table.results thead th { border-bottom: 2px solid #212529; border-top: 2px solid #212529; }
+table.results tbody tr:last-child td { border-bottom: 2px solid #212529; }
+table.results tr.group td {
+  font-style: italic;
+  color: var(--muted);
+  text-align: center;
+  background: #fafafa;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+table.results tr.sep td { border-top: 1px solid var(--border); }
+table.results tr.ours td { background: var(--ours-bg); font-weight: 700; color: var(--ours-text); }
+table.results td.mean, table.results th.mean { border-left: 1px solid var(--border); }
+table.results .gain { font-weight: 400; font-size: 0.85em; color: #2e8b57; }
+.table-caption {
+  text-align: center;
+  color: var(--muted);
+  font-size: 0.92em;
+  margin: 10px auto 0;
+  max-width: 820px;
+}
+
+/* Qualitative toggle */
+.toggle { display: flex; justify-content: center; gap: 8px; margin-bottom: 18px; }
+.qual-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px 14px;
+}
+.qual-grid img { border-radius: 8px; width: 100%; height: auto; display: block; }
+.qual-head { text-align: center; font-weight: 700; }
+.qual-head.real { color: #8a8f98; }
+.qual-head.ours { color: var(--ours-text); }
+
+/* New-category examples */
+.examples { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; align-items: center; }
+
+/* Citation */
+pre.bibtex {
+  background: var(--gray-bg);
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 16px;
+  text-align: left;
+  font-size: 0.85em;
+  white-space: pre-wrap;
+  padding-right: 76px;
+  position: relative;
+  margin: 0;
+}
+.copy-btn { position: absolute; top: 8px; right: 8px; }
+
+footer { padding: 18px 5% 34px; color: var(--muted); font-size: 0.9em; text-align: center; }
+
+/* Phones */
+@media (max-width: 720px) {
+  .section { padding: 34px 16px; }
+  .page-header, .teaser { padding-left: 16px; padding-right: 16px; }
+  .authors a, .authors span { font-size: 19px; margin: 0 6px; }
+  .affiliation { font-size: 15px; }
+  .venue { font-size: 1.25em; }
+  .links .btn { font-size: 16px; }
+  .stats { grid-template-columns: 1fr; }
+  .modalities { gap: 8px; }
+  .modalities figcaption, .col-label { font-size: 0.85em; }
+  .pruning, .examples { grid-template-columns: 1fr; }
+  .qual-grid { gap: 6px 8px; }
+  .qual-head { font-size: 0.85em; }
+  .fig-card { padding: 12px; }
+  table.results { font-size: 13px; }
+  .abstract p { text-align: left; }
+  mjx-container[display="true"] { font-size: 72% !important; }
+}
