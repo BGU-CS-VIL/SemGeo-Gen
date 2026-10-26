@@ -72,7 +72,7 @@
             <div class="stats">
                 <div class="stat"><div class="num">0</div><div class="lbl">manual labels (no point, part, or correspondence annotation)</div></div>
                 <div class="stat"><div class="num">93%</div><div class="lbl">PCK@0.10 agreement with human KeypointNet annotations</div></div>
-                <div class="stat"><div class="num">+4.4 / +2.9</div><div class="lbl">mean PCK@0.10 on SPair-71k Rigid-9 for GeoAware-SC / MARCO</div></div>
+                <div class="stat"><div class="num">+4.4 / +3.0</div><div class="lbl">mean PCK@0.10 on SPair-71k Rigid-9 for GeoAware-SC / MARCO</div></div>
             </div>
         </div>
     </section>
@@ -95,7 +95,7 @@
     <section class="section gray">
         <div class="section-inner">
             <h2>Method</h2>
-            <p class="lead-sub">Input: only rotation-aligned object pairs, with no point, part, or correspondence labels.</p>
+            <p class="lead-sub">Input: approximately rotation-aligned object pairs, each normalized to the unit sphere, with no point, part, or correspondence labels.</p>
             <div class="fig-card">
                 <img class="fig" src="assets/figures/pipeline.png" alt="SemGeo-Gen pipeline: CPA registration of the source onto the target, establishing correspondences, and semantic correspondence pruning" loading="lazy">
             </div>
@@ -103,8 +103,9 @@
             <div class="steps section-narrow">
                 <div class="step">
                     <h4><span class="num">1</span>Lift semantic features to 3D</h4>
-                    <p>Each object is rendered from calibrated virtual cameras, dense DINOv2 features are extracted in image space and lifted back to the visible 3D points, and multi-view observations are aggregated into one descriptor per point. Semantic compatibility is the cosine similarity of the descriptors after a joint 64-D PCA:</p>
-                    \[ s_{\mathrm{sem}}(x_i,x_j)=\frac{z_i^\top z_j}{\|z_i\|_2\,\|z_j\|_2} > \tau_{\mathrm{sem}}, \qquad \tau_{\mathrm{sem}}=0.85. \]
+                    <p>Each object is rendered from calibrated virtual cameras, dense DINOv2 features are extracted in image space and lifted back to the visible 3D points, and multi-view observations are averaged into one descriptor per point. Semantic compatibility is the cosine similarity of the descriptors after a joint 64-D PCA:</p>
+                    \[ s_{\mathrm{sem}}(x_i,x_j)=\frac{z_i^\top z_j}{\|z_i\|_2\,\|z_j\|_2} > \tau_{\mathrm{sem}}, \qquad \tau_{\mathrm{sem}}=0.575, \]
+                    <p>equivalently, a squared Euclidean distance below 0.85 between L2-normalized descriptors, since \(\|\hat z_i-\hat z_j\|_2^2=2\,(1-s_{\mathrm{sem}})\).</p>
                 </div>
 
                 <div class="step">
@@ -115,7 +116,7 @@
 
                 <div class="step">
                     <h4><span class="num">3</span>Continuous piecewise-affine (CPA) registration</h4>
-                    <p>The source is deformed onto the target by a control grid over the normalized 3D domain, decomposed into tetrahedra by Delaunay triangulation. Each vertex has a learnable displacement \(u_v\), and points move by barycentric interpolation, so the deformation is affine inside each tetrahedron and continuous across cells. It is fit by gradient descent on a Chamfer loss with smoothness regularization:</p>
+                    <p>The source is deformed onto the target by a control grid over the normalized 3D domain, decomposed into tetrahedra by Delaunay triangulation. Each vertex has an optimized displacement \(u_v\), and points move by barycentric interpolation, so the deformation is affine inside each tetrahedron and continuous across cells. It is fit by gradient descent on a Chamfer loss with smoothness regularization:</p>
                     \[ \min_{T_{\mathrm{CPA}}}\; \mathcal{L}_{\mathrm{Chamfer}}\big(T_{\mathrm{CPA}}(\mathcal{X}_S),\mathcal{X}_T\big) + \lambda_{\mathrm{smooth}}\,\frac{1}{|\mathcal{E}|}\sum_{(v_a,v_b)\in\mathcal{E}}\|u_{v_a}-u_{v_b}\|_2^2, \qquad \lambda_{\mathrm{smooth}}=0.3, \]
                     \[ \mathcal{L}_{\mathrm{Chamfer}}(\widehat{\mathcal{X}}_S,\mathcal{X}_T)=\frac{1}{|\widehat{\mathcal{X}}_S|}\sum_{\hat{x}\in\widehat{\mathcal{X}}_S}\min_{x\in\mathcal{X}_T}\|\hat{x}-x\|_2^2+\frac{1}{|\mathcal{X}_T|}\sum_{x\in\mathcal{X}_T}\min_{\hat{x}\in\widehat{\mathcal{X}}_S}\|x-\hat{x}\|_2^2, \]
                     <p>where \(\mathcal{E}\) are the edges between neighboring vertices of the tetrahedral control grid.</p>
@@ -131,7 +132,7 @@
                     <h4><span class="num">5</span>Project to 2D, scale combinatorially</h4>
                     <p>Rendering with calibrated cameras \(\pi_{c_S},\pi_{c_T}\) turns each 3D match into 3D&ndash;2D (one endpoint projected) or 2D&ndash;2D (both projected) supervision:</p>
                     \[ \big(u_i^S,u_j^T\big)=\big(\pi_{c_S}(x_i^S),\,\pi_{c_T}(x_j^T)\big). \]
-                    <p>A category with \(N\) objects yields up to \(\binom{N}{2}\) cross-instance pairs, and each pair can be rendered from many views.</p>
+                    <p>Only correspondences whose projected endpoints are visible in their rendered views are kept. A category with \(N\) objects yields up to \(\binom{N}{2}\) cross-instance pairs, and each pair can be rendered from many views.</p>
                 </div>
             </div>
         </div>
@@ -149,61 +150,41 @@
                         <tr><th>Method</th><th>Training regime</th><th>aero</th><th>bike</th><th>boat</th><th>bus</th><th>car</th><th>chair</th><th>mbike</th><th>train</th><th>tv</th><th class="mean">Mean</th></tr>
                     </thead>
                     <tbody>
-                        <tr class="group"><td colspan="12">Unsupervised / weakly supervised methods</td></tr>
-                        <tr><td>SD</td><td>SPair-71k</td><td>62.8</td><td>52.7</td><td>31.2</td><td>39.1</td><td>35.6</td><td>32.0</td><td>51.0</td><td>61.8</td><td>52.9</td><td class="mean">46.57</td></tr>
-                        <tr><td>DINOv2</td><td>SPair-71k</td><td>73.4</td><td>60.2</td><td>43.2</td><td>46.7</td><td>45.1</td><td>33.4</td><td>60.7</td><td>54.2</td><td>23.9</td><td class="mean">48.98</td></tr>
-                        <tr><td>DINOv2+SD</td><td>SPair-71k</td><td>73.8</td><td>61.0</td><td>40.2</td><td>47.4</td><td>44.1</td><td>41.5</td><td>61.7</td><td>63.5</td><td>52.4</td><td class="mean">53.96</td></tr>
-                        <tr><td>SphericalMaps</td><td>SPair-71k</td><td>76.2</td><td>60.1</td><td>46.5</td><td>74.9</td><td>68.0</td><td>45.1</td><td>69.1</td><td>73.9</td><td>58.1</td><td class="mean">63.54</td></tr>
+                        <tr class="group"><td colspan="12">Zero-shot / weakly supervised methods</td></tr>
+                        <tr><td>SD</td><td>Zero-shot</td><td>62.8</td><td>52.7</td><td>31.2</td><td>39.1</td><td>35.6</td><td>32.0</td><td>51.0</td><td>61.8</td><td>52.9</td><td class="mean">46.57</td></tr>
+                        <tr><td>DINOv2</td><td>Zero-shot</td><td>73.4</td><td>60.2</td><td>43.2</td><td>46.7</td><td>45.1</td><td>33.4</td><td>60.7</td><td>54.2</td><td>23.9</td><td class="mean">48.98</td></tr>
+                        <tr><td>DINOv2+SD</td><td>Zero-shot</td><td>73.8</td><td>61.0</td><td>40.2</td><td>47.4</td><td>44.1</td><td>41.5</td><td>61.7</td><td>63.5</td><td>52.4</td><td class="mean">53.96</td></tr>
+                        <tr><td>SphericalMaps</td><td>Weakly sup. (SPair-71k)</td><td>76.2</td><td>60.1</td><td>46.5</td><td>74.9</td><td>68.0</td><td>45.1</td><td>69.1</td><td>73.9</td><td>58.1</td><td class="mean">63.54</td></tr>
                         <tr class="group"><td colspan="12">Supervised methods</td></tr>
                         <tr><td>SCorrSan</td><td>SPair-71k</td><td>57.1</td><td>40.3</td><td>38.1</td><td>57.8</td><td>47.1</td><td>25.2</td><td>45.3</td><td>77.7</td><td>69.7</td><td class="mean">50.92</td></tr>
                         <tr><td>CATS++</td><td>SPair-71k</td><td>60.6</td><td>46.9</td><td>41.6</td><td>64.9</td><td>50.4</td><td>29.2</td><td>50.9</td><td>80.9</td><td>74.9</td><td class="mean">55.59</td></tr>
                         <tr><td>DHF</td><td>SPair-71k</td><td>74.0</td><td>61.0</td><td>40.7</td><td>70.0</td><td>74.4</td><td>38.5</td><td>66.6</td><td>87.4</td><td>60.3</td><td class="mean">63.66</td></tr>
                         <tr><td>DINO+SD (S)</td><td>SPair-71k</td><td>84.7</td><td>67.5</td><td>64.5</td><td>85.7</td><td>82.0</td><td>57.0</td><td>75.9</td><td>93.6</td><td>70.5</td><td class="mean">75.71</td></tr>
-                        <tr><td>Jamais Vu</td><td>SPair-71k</td><td>83.6</td><td>70.1</td><td>64.1</td><td>91.4</td><td>83.2</td><td>61.4</td><td>78.4</td><td>95.5</td><td>80.1</td><td class="mean">78.80</td></tr>
+                        <tr><td>Jamais Vu</td><td>SPair-71k</td><td>83.6</td><td>70.1</td><td>64.1</td><td>91.4</td><td>83.2</td><td>61.4</td><td>78.4</td><td>95.5</td><td>80.1</td><td class="mean">78.64</td></tr>
                         <tr class="group"><td colspan="12">Recent supervised state-of-the-art methods under different supervision settings</td></tr>
                         <tr><td rowspan="3">GeoAware-SC</td><td>SPair-71k</td><td>83.42</td><td>71.07</td><td>66.68</td><td>90.93</td><td>86.10</td><td>62.18</td><td>79.54</td><td>95.33</td><td>79.00</td><td class="mean">79.36</td></tr>
                         <tr><td>SPair-71k + Ours</td><td>86.28</td><td>74.60</td><td>68.33</td><td>93.12</td><td>84.73</td><td>68.94</td><td>79.73</td><td>95.31</td><td>80.73</td><td class="mean">81.31</td></tr>
                         <tr class="ours"><td>Ours P.T. &rarr; SPair-71k</td><td>89.38</td><td>76.11</td><td>71.15</td><td>93.80</td><td>86.74</td><td>73.80</td><td>82.33</td><td>95.67</td><td>84.59</td><td class="mean">83.73</td></tr>
-                        <tr class="sep"><td rowspan="3">MARCO</td><td>SPair-71k</td><td>92.16</td><td>76.76</td><td>76.53</td><td>93.17</td><td>88.57</td><td>82.49</td><td>82.03</td><td>93.62</td><td>91.72</td><td class="mean">86.39</td></tr>
-                        <tr><td>SPair-71k + Ours</td><td>92.26</td><td>77.49</td><td>73.74</td><td>92.59</td><td>84.86</td><td>82.71</td><td>79.78</td><td>93.22</td><td>89.72</td><td class="mean">85.23</td></tr>
-                        <tr class="ours"><td>Ours P.T. &rarr; SPair-71k</td><td>95.59</td><td>80.66</td><td>79.35</td><td>94.59</td><td>91.89</td><td>91.16</td><td>82.30</td><td>94.69</td><td>93.49</td><td class="mean">89.28</td></tr>
+                        <tr class="sep"><td rowspan="3">MARCO</td><td>SPair-71k</td><td>92.16</td><td>76.76</td><td>76.53</td><td>93.17</td><td>88.57</td><td>82.49</td><td>82.03</td><td>93.62</td><td>91.72</td><td class="mean">86.34</td></tr>
+                        <tr><td>SPair-71k + Ours</td><td>92.26</td><td>77.49</td><td>73.74</td><td>92.59</td><td>84.86</td><td>82.71</td><td>79.78</td><td>93.22</td><td>89.72</td><td class="mean">85.15</td></tr>
+                        <tr class="ours"><td>Ours P.T. &rarr; SPair-71k</td><td>95.59</td><td>80.66</td><td>79.35</td><td>94.59</td><td>91.89</td><td>91.16</td><td>82.30</td><td>94.69</td><td>93.49</td><td class="mean">89.30</td></tr>
                     </tbody>
                 </table>
             </div>
             <p class="table-caption">Category-wise PCK@0.10 &uarr; on <b>Rigid-9</b>: the rigid SPair-71k categories with well-defined semantic-geometric structure (excluding the rotationally symmetric bottle and potted plant). P.T. = pretraining.</p>
 
-            <div class="row g-4" style="margin-top: 18px;">
-                <div class="col-xl-8">
-                    <h3>Rigid-only pretraining also helps non-rigid categories</h3>
-                    <div class="table-wrap">
-                        <table class="results">
-                            <thead><tr><th>Method</th><th>Training</th><th>Rigid-9</th><th>Non-rigid-7</th><th>Symmetric-2</th><th class="mean">All-18</th></tr></thead>
-                            <tbody>
-                                <tr><td rowspan="3">GeoAware-SC</td><td>SPair-71k</td><td>80.48</td><td>86.94</td><td>72.35</td><td class="mean">82.09</td></tr>
-                                <tr><td>DenseMatcher P.T.</td><td>80.37</td><td>86.54</td><td>71.97</td><td class="mean">81.83</td></tr>
-                                <tr class="ours"><td>Ours P.T.</td><td>84.20 <span class="gain">+3.72</span></td><td>88.23 <span class="gain">+1.29</span></td><td>72.58 <span class="gain">+0.23</span></td><td class="mean">84.48 <span class="gain">+2.39</span></td></tr>
-                                <tr class="sep"><td rowspan="2">MARCO</td><td>SPair-71k</td><td>87.32</td><td>90.79</td><td>74.99</td><td class="mean">87.30</td></tr>
-                                <tr class="ours"><td>Ours P.T.</td><td>89.61 <span class="gain">+2.29</span></td><td>92.06 <span class="gain">+1.27</span></td><td>75.38 <span class="gain">+0.39</span></td><td class="mean">88.98 <span class="gain">+1.68</span></td></tr>
-                            </tbody>
-                        </table>
-                    </div>
-                    <p class="table-caption">Pretraining on synthetic rigid categories, then fine-tuning on all 18 SPair-71k categories. PCK@0.10 &uarr;.</p>
-                </div>
-                <div class="col-xl-4">
-                    <h3>Pseudo-label quality matters</h3>
-                    <div class="table-wrap">
-                        <table class="results">
-                            <thead><tr><th>Pretraining labels</th><th class="mean">Rigid-9 mean</th></tr></thead>
-                            <tbody>
-                                <tr><td>None (SPair-71k only)</td><td class="mean">79.36</td></tr>
-                                <tr><td>DenseMatcher</td><td class="mean">80.13 <span class="gain">+0.77</span></td></tr>
-                                <tr class="ours"><td>SemGeo-Gen (ours)</td><td class="mean">83.73 <span class="gain">+4.37</span></td></tr>
-                            </tbody>
-                        </table>
-                    </div>
-                    <p class="table-caption">GeoAware-SC, same data-generation and pretrain-then-fine-tune protocol. PCK@0.10 &uarr;.</p>
-                </div>
+            <h3>Beyond rigid categories</h3>
+            <div class="table-wrap">
+                <table class="results">
+                    <thead><tr><th>Training regime</th><th>Rigid-9</th><th>Non-rigid-7</th><th>Symmetric-2</th><th class="mean">All-18</th></tr></thead>
+                    <tbody>
+                        <tr><td>Real only</td><td>80.48</td><td>86.94</td><td>72.35</td><td class="mean">82.09</td></tr>
+                        <tr><td>DenseMatcher P.T. &rarr; Real</td><td>80.37</td><td>86.54</td><td>71.97</td><td class="mean">81.83</td></tr>
+                        <tr class="ours"><td>Ours P.T. &rarr; Real</td><td>84.20 <span class="gain">+3.72</span></td><td>88.23 <span class="gain">+1.29</span></td><td>72.58 <span class="gain">+0.23</span></td><td class="mean">84.48 <span class="gain">+2.39</span></td></tr>
+                    </tbody>
+                </table>
             </div>
+            <p class="table-caption">GeoAware-SC pretrained on our Rigid-9 synthetic correspondences, then fine-tuned on all 18 SPair-71k categories. Gains extend to categories excluded from pretraining (Non-rigid-7: bird, cat, cow, dog, horse, person, sheep; Symmetric-2: bottle, potted plant). DenseMatcher pseudo-labels, under the same protocol, perform similarly to real-only training. PCK@0.10 &uarr;.</p>
         </div>
     </section>
 
@@ -236,7 +217,7 @@
                 <img class="fig" src="assets/figures/coverage_src_view1.png" alt="Roofless car from a second view" loading="lazy" style="margin-top: 14px;">
                 <img class="fig" src="assets/figures/coverage_tgt_view1.png" alt="White car from a second view" loading="lazy">
             </div>
-            <p class="caption"><span class="legend-green">Green</span> points have at least one point in the paired object with cosine similarity above 0.85; <span class="legend-red">red</span> points have none (e.g., the exposed seats) and receive no correspondences.</p>
+            <p class="caption"><span class="legend-green">Green</span> points have at least one point in the paired object with cosine similarity above 0.575; <span class="legend-red">red</span> points have none (e.g., the exposed seats) and receive no correspondences.</p>
 
             <h3>Final correspondences after pruning</h3>
             <div class="pruning" style="margin-top: 14px;">
@@ -251,7 +232,9 @@
     <section class="section gray">
         <div class="section-inner">
             <h2>Agreement with Human Annotations</h2>
-            <p class="lead-sub">Generated 3D correspondences vs. human-annotated KeypointNet keypoints, used for evaluation only. Three subsets of 100 models per category.</p>
+            <p class="lead-sub">Generated correspondences vs. human-annotated KeypointNet keypoints, used for evaluation only, in 3D and after projection into rendered images.</p>
+
+            <h3 style="margin-top: 8px;">3D&ndash;3D accuracy</h3>
 
             <div class="row g-4 justify-content-center">
                 <div class="col-md-6 col-lg-5">
@@ -291,7 +274,48 @@
                     </div>
                 </div>
             </div>
-            <p class="table-caption">PCK at thresholds 0.05&ndash;0.20 of the target bounding-box diagonal &uarr;.</p>
+            <p class="table-caption">PCK &uarr; at thresholds 0.05&ndash;0.20 of the target bounding-box diagonal, averaged over three random subsets of 100 models per category (38 and 90 for Cap and Helmet). Pairs are kept when at least 60% of each model's points have a DINOv2 match above 0.575 (68% of pairs on average); keypoints with no surviving correspondence are excluded, giving a median GT-used rate of 57.6%.</p>
+
+
+            <h3>3D&ndash;2D accuracy</h3>
+            <div class="row g-4 justify-content-center" style="margin-top: 2px;">
+                <div class="col-lg-6">
+                    <div class="table-wrap">
+                        <table class="results">
+                            <thead><tr><th>Category</th><th>@0.05</th><th>@0.10</th><th>@0.15</th><th>@0.20</th><th>Coverage</th><th class="mean">3D @0.10</th></tr></thead>
+                            <tbody>
+                                <tr><td>Airplane</td><td>0.79</td><td>0.94</td><td>0.98</td><td>0.99</td><td>0.73</td><td>0.94</td></tr>
+                                <tr><td>Bathtub</td><td>0.81</td><td>0.95</td><td>0.99</td><td>1.00</td><td>0.26</td><td>0.88</td></tr>
+                                <tr><td>Bed</td><td>0.81</td><td>0.96</td><td>0.99</td><td>1.00</td><td>0.45</td><td>0.91</td></tr>
+                                <tr><td>Bottle</td><td>0.81</td><td>0.95</td><td>0.98</td><td>0.99</td><td>0.40</td><td>0.96</td></tr>
+                                <tr><td>Cap</td><td>0.83</td><td>0.97</td><td>1.00</td><td>1.00</td><td>0.30</td><td>0.97</td></tr>
+                                <tr><td>Car</td><td>0.76</td><td>0.95</td><td>0.98</td><td>1.00</td><td>0.88</td><td>0.95</td></tr>
+                                <tr><td>Chair</td><td>0.80</td><td>0.97</td><td>0.99</td><td>1.00</td><td>0.31</td><td>0.96</td></tr>
+                                <tr><td>Guitar</td><td>0.81</td><td>0.97</td><td>0.99</td><td>1.00</td><td>0.61</td><td>0.96</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="col-lg-6">
+                    <div class="table-wrap">
+                        <table class="results">
+                            <thead><tr><th>Category</th><th>@0.05</th><th>@0.10</th><th>@0.15</th><th>@0.20</th><th>Coverage</th><th class="mean">3D @0.10</th></tr></thead>
+                            <tbody>
+                                <tr><td>Helmet</td><td>0.57</td><td>0.85</td><td>0.96</td><td>0.99</td><td>0.20</td><td>0.84</td></tr>
+                                <tr><td>Knife</td><td>0.79</td><td>0.92</td><td>0.96</td><td>0.98</td><td>0.32</td><td>0.93</td></tr>
+                                <tr><td>Laptop</td><td>0.93</td><td>1.00</td><td>1.00</td><td>1.00</td><td>0.55</td><td>0.99</td></tr>
+                                <tr><td>Motorcycle</td><td>0.70</td><td>0.90</td><td>0.97</td><td>0.99</td><td>0.74</td><td>0.93</td></tr>
+                                <tr><td>Mug</td><td>0.79</td><td>0.97</td><td>0.99</td><td>1.00</td><td>0.59</td><td>0.96</td></tr>
+                                <tr><td>Skateboard</td><td>0.84</td><td>0.97</td><td>0.99</td><td>1.00</td><td>0.42</td><td>0.97</td></tr>
+                                <tr><td>Table</td><td>0.87</td><td>0.98</td><td>1.00</td><td>1.00</td><td>0.40</td><td>0.96</td></tr>
+                                <tr><td>Vessel</td><td>0.70</td><td>0.86</td><td>0.93</td><td>0.97</td><td>0.08</td><td>0.71</td></tr>
+                                <tr class="ours sep"><td>Mean</td><td>0.79</td><td>0.94</td><td>0.98</td><td>0.99</td><td>0.45</td><td>0.93</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <p class="table-caption">Correspondences projected into four random renderings of each target (azimuth 0&ndash;360&deg;, elevation &minus;10&ndash;70&deg;), keeping only visible keypoints and visible predicted targets. 2D PCK &uarr; is relative to the projected bounding-box diagonal: <b>94.2% PCK@0.10</b>, close to the 95.1% 3D PCK on the same keypoints, so accuracy is largely preserved after projection. Coverage is the fraction of visible ground-truth keypoints with a valid correspondence; the last column is the original 3D PCK@0.10 over all found keypoints.</p>
 
             <div class="row g-4" style="margin-top: 6px;">
                 <div class="col-lg-6">
@@ -321,6 +345,38 @@
                         </table>
                     </div>
                     <p class="table-caption">Mean PCK on KeypointNet. Pair-level numbers are computed on the retained pairs.</p>
+                </div>
+            </div>
+
+            <div class="row g-4" style="margin-top: 6px;">
+                <div class="col-lg-6">
+                    <h3>Semantic threshold: accuracy vs. coverage</h3>
+                    <div class="table-wrap">
+                        <table class="results">
+                            <thead><tr><th>\(\tau_{\mathrm{sem}}\)</th><th>@0.05</th><th>@0.10</th><th>@0.15</th><th>@0.20</th><th class="mean">GT-used</th></tr></thead>
+                            <tbody>
+                                <tr><td>0.75 (strict)</td><td>0.758</td><td>0.930</td><td>0.974</td><td>0.988</td><td class="mean">0.260</td></tr>
+                                <tr class="ours"><td>0.575 (ours)</td><td>0.749</td><td>0.926</td><td>0.973</td><td>0.989</td><td class="mean">0.576</td></tr>
+                                <tr><td>0.25 (loose)</td><td>0.699</td><td>0.896</td><td>0.960</td><td>0.983</td><td class="mean">0.915</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <p class="table-caption">With pair-level filtering, averaged over three seeds. Our default keeps almost the strict setting's accuracy while more than doubling the median fraction of ground-truth keypoints that remain evaluable.</p>
+                </div>
+                <div class="col-lg-6">
+                    <h3>Sensitivity to rotation misalignment</h3>
+                    <div class="table-wrap">
+                        <table class="results">
+                            <thead><tr><th>Mean PCK</th><th>0&deg;</th><th>5&deg;</th><th>10&deg;</th><th>30&deg;</th><th>60&deg;</th><th>90&deg;</th></tr></thead>
+                            <tbody>
+                                <tr><td>@0.05</td><td>.75</td><td>.71</td><td>.65</td><td>.32</td><td>.10</td><td>.04</td></tr>
+                                <tr><td>@0.10</td><td>.93</td><td>.89</td><td>.85</td><td>.55</td><td>.20</td><td>.08</td></tr>
+                                <tr><td>@0.15</td><td>.98</td><td>.94</td><td>.90</td><td>.66</td><td>.26</td><td>.12</td></tr>
+                                <tr><td>@0.20</td><td>.99</td><td>.95</td><td>.91</td><td>.70</td><td>.30</td><td>.14</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <p class="table-caption">Random-axis rotation applied to the source or the target, 100 pairs per category. Robust to small misalignment; approximate canonical alignment remains a prerequisite.</p>
                 </div>
             </div>
 
